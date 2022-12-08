@@ -44,7 +44,7 @@ static const uint32_t K[] = {
 /*
  * Pads a message to a multiple of 512 bits or 64 bytes in length,
  * with a 1 bit appended as well as the size being added to the
- * end as a 64-bit little-endian integer.
+ * end as a 64-bit big-endian integer.
  */
 static void pad_message(message *msg) {
     uint64_t i, new_size, old_size;
