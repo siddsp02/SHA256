@@ -7,11 +7,9 @@
  */
 
 #include "sha256.h"
-#include <stdarg.h>
 #include <assert.h>
 
 #define BLOCK_SIZE 64
-#define BLOCK_SIZE_BITS BLOCK_SIZE * 8
 #define HASH_SIZE 8 * sizeof(uint32_t)
 
 #define ROTR32(a, n) ((a >> n) | (a << (32 - n)))
@@ -48,18 +46,23 @@ static const uint32_t K[] = {
 /*
  * Pads a message to a multiple of 512 bits or 64 bytes in length,
  * with a 1 bit appended as well as the size being added to the
- * end as a 64-bit little-endian integer.
+ * end as a 64-bit big-endian integer.
  */
 static void pad_bytes(message *msg) {
-    uint64_t i, new_size, old_size;
+    uint64_t new_size, old_size;
     old_size = msg->size;
+    /* Calculate the next multiple of 64 greater than the current size
+       of the block when a 1-bit is appended, and the size of the message
+       itself is added to the end as a 64-bit big-endian integer. */
     new_size = BLOCK_SIZE * -(-(old_size + 9) / BLOCK_SIZE);
     assert(new_size > old_size && new_size % 64 == 0);
     msg->buf = realloc(msg->buf, new_size);
-    msg->buf[msg->size] = 1 << 7; // Append 1-bit to end of message.
-    memset(msg->buf + msg->size + 1, 0, new_size - msg->size + 1);
+    msg->buf[old_size] = 1 << 7; // Append one-bit to message.
+    memset(msg->buf + old_size + 1, 0, new_size - old_size + 1);
     msg->size = new_size;
-    old_size = U64REVBYTES(old_size * 8);  // Get bit-length and reverse.
+    /* Get the old length of the message buffer, and append it
+       to the end of the message as a 64-bit big-endian integer.*/
+    old_size = U64REVBYTES(old_size * 8);
     memcpy(msg->buf + new_size - 8, &old_size, sizeof(uint64_t));
 }
 
@@ -77,12 +80,7 @@ static uint32_t *get_blocks(const char *msg) {
     return w;
 }
 
-/*
- * Returns the SHA256 hash of a message when given its contents.
- * Messages are automatically padded as part of the specification
- * of this algorithm.
- */
-char *sha256(message *msg) {
+const char *sha256(message *msg) {
     uint32_t a, b, c, d, e, f, g, h, i, n, t, t1, t2, *w;
     uint32_t H[] = {
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
@@ -110,15 +108,13 @@ char *sha256(message *msg) {
         H[4] += e, H[5] += f, H[6] += g, H[7] += h;
         free(w);
     }
-    char *msg_hash = malloc(HASH_SIZE);
-    memcpy(msg_hash, H, HASH_SIZE);
-    return msg_hash;
+    memcpy(msg->hash, H, HASH_SIZE);
+    return ((const char *) msg->hash);
 }
 
 int main() {
     size_t i, j, sizes[] = {3, 56, 1000000};
     message m[3];
-    char *hash;
     const char v0[] = {0x61, 0x62, 0x63};
     const char v1[] = {
         0x61, 0x62, 0x63, 0x64, 0x62, 0x63, 0x64, 0x65,
@@ -139,9 +135,9 @@ int main() {
     memset(m[2].buf, 0x61, 1000000);  // One million of 0x61
     // Print the hashes of the test vectors.
     for (i = 0; i < 3; ++i) {
-        hash = sha256(&m[i]);
+        sha256(&m[i]);
         for (j = 0; j < 8; ++j)
-            printf("%08x ", ((uint32_t *) hash)[j]);
+            printf("%08x ", m[i].hash[j]);
         printf("\n");
         free(m[i].buf);
     }
