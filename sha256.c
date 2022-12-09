@@ -3,13 +3,16 @@
  * The following code is my own (and took lots of time debugging)!
  *
  * References:
- *  - https://helix.stormhub.org/papers/SHA-256.pdf
+ *   - https://helix.stormhub.org/papers/SHA-256.pdf
  */
 
 #include "sha256.h"
+#include <stdarg.h>
 #include <assert.h>
 
 #define BLOCK_SIZE 64
+#define BLOCK_SIZE_BITS BLOCK_SIZE * 8
+#define HASH_SIZE 8 * sizeof(uint32_t)
 
 #define ROTR32(a, n) ((a >> n) | (a << (32 - n)))
 #define CH(x, y, z) ((x & y) ^ (~x & z))
@@ -19,6 +22,7 @@
 #define LS0(x) (ROTR32(x, 7) ^ ROTR32(x, 18) ^ (x >> 3))
 #define LS1(x) (ROTR32(x, 17) ^ ROTR32(x, 19) ^ (x >> 10))
 
+#define BLOCK_COUNT(msg) (msg->size / BLOCK_SIZE)
 #define U32REVBYTES(x) (                                                        \
     ((x >> 24) & 0x000000ff) | ((x <<  8) & 0x00ff0000) |                       \
     ((x >>  8) & 0x0000ff00) | ((x << 24) & 0xff000000)                         \
@@ -44,9 +48,9 @@ static const uint32_t K[] = {
 /*
  * Pads a message to a multiple of 512 bits or 64 bytes in length,
  * with a 1 bit appended as well as the size being added to the
- * end as a 64-bit big-endian integer.
+ * end as a 64-bit little-endian integer.
  */
-static void pad_message(message *msg) {
+static void pad_bytes(message *msg) {
     uint64_t i, new_size, old_size;
     old_size = msg->size;
     new_size = BLOCK_SIZE * -(-(old_size + 9) / BLOCK_SIZE);
@@ -56,7 +60,7 @@ static void pad_message(message *msg) {
     memset(msg->buf + msg->size + 1, 0, new_size - msg->size + 1);
     msg->size = new_size;
     old_size = U64REVBYTES(old_size * 8);  // Get bit-length and reverse.
-    memcpy(msg->buf + msg->size - 8, &old_size, 8);
+    memcpy(msg->buf + new_size - 8, &old_size, sizeof(uint64_t));
 }
 
 /*
@@ -73,15 +77,6 @@ static uint32_t *get_blocks(const char *msg) {
     return w;
 }
 
-message message_create(size_t size, const char *buf) {
-    message ret = {
-        .size = size,
-        .buf = malloc(size * sizeof(char)),
-    };
-    memcpy(ret.buf, buf, size * sizeof(char));
-    return ret;
-}
-
 /*
  * Returns the SHA256 hash of a message when given its contents.
  * Messages are automatically padded as part of the specification
@@ -89,12 +84,12 @@ message message_create(size_t size, const char *buf) {
  */
 char *sha256(message *msg) {
     uint32_t a, b, c, d, e, f, g, h, i, n, t, t1, t2, *w;
-    uint32_t H[8] = {
+    uint32_t H[] = {
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
     };
-    pad_message(msg);
-    n = msg->size / BLOCK_SIZE;
+    pad_bytes(msg);
+    n = BLOCK_COUNT(msg);
     for (t = 0; t < n; ++t) {
         a = H[0], b = H[1], c = H[2], d = H[3];
         e = H[4], f = H[5], g = H[6], h = H[7];
@@ -115,42 +110,40 @@ char *sha256(message *msg) {
         H[4] += e, H[5] += f, H[6] += g, H[7] += h;
         free(w);
     }
-    char *msg_hash = malloc(8 * sizeof(uint32_t));
-    memcpy(msg_hash, H, 8 * sizeof(uint32_t));
+    char *msg_hash = malloc(HASH_SIZE);
+    memcpy(msg_hash, H, HASH_SIZE);
     return msg_hash;
 }
 
-/* Test vectors (these will be moved to another
-   file when this becomes a proper library). */
-
-static const char v0[] = {0x61, 0x62, 0x63};
-static const char v1[] = {
-    0x61, 0x62, 0x63, 0x64, 0x62, 0x63, 0x64, 0x65,
-    0x63, 0x64, 0x65, 0x66, 0x64, 0x65, 0x66, 0x67,
-    0x65, 0x66, 0x67, 0x68, 0x66, 0x67, 0x68, 0x69,
-    0x67, 0x68, 0x69, 0x6a, 0x68, 0x69, 0x6a, 0x6b,
-    0x69, 0x6a, 0x6b, 0x6c, 0x6a, 0x6b, 0x6c, 0x6d,
-    0x6b, 0x6c, 0x6d, 0x6e, 0x6c, 0x6d, 0x6e, 0x6f,
-    0x6d, 0x6e, 0x6f, 0x70, 0x6e, 0x6f, 0x70, 0x71,
-};
-static const char v2[] = {
-    #include "onemillion.txt"
-};
-
-static const size_t vec_sizes[] = {3, 56, 1000000};
-static const char *vectors[] = {v0, v1, v2};
-
 int main() {
+    size_t i, j, sizes[] = {3, 56, 1000000};
+    message m[3];
     char *hash;
-    message msg;
-    int i, j;
+    const char v0[] = {0x61, 0x62, 0x63};
+    const char v1[] = {
+        0x61, 0x62, 0x63, 0x64, 0x62, 0x63, 0x64, 0x65,
+        0x63, 0x64, 0x65, 0x66, 0x64, 0x65, 0x66, 0x67,
+        0x65, 0x66, 0x67, 0x68, 0x66, 0x67, 0x68, 0x69,
+        0x67, 0x68, 0x69, 0x6a, 0x68, 0x69, 0x6a, 0x6b,
+        0x69, 0x6a, 0x6b, 0x6c, 0x6a, 0x6b, 0x6c, 0x6d,
+        0x6b, 0x6c, 0x6d, 0x6e, 0x6c, 0x6d, 0x6e, 0x6f,
+        0x6d, 0x6e, 0x6f, 0x70, 0x6e, 0x6f, 0x70, 0x71,
+    };
     for (i = 0; i < 3; ++i) {
-        msg = message_create(vec_sizes[i], vectors[i]);
-        hash = sha256(&msg);
+        m[i].size = sizes[i];
+        m[i].buf = malloc(sizes[i]);
+    }
+    // Initialize values.
+    memcpy(m[0].buf, v0, 3);
+    memcpy(m[1].buf, v1, 56);
+    memset(m[2].buf, 0x61, 1000000);  // One million of 0x61
+    // Print the hashes of the test vectors.
+    for (i = 0; i < 3; ++i) {
+        hash = sha256(&m[i]);
         for (j = 0; j < 8; ++j)
             printf("%08x ", ((uint32_t *) hash)[j]);
-        free(msg.buf);
         printf("\n");
+        free(m[i].buf);
     }
     return 0;
 }

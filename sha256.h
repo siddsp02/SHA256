@@ -11,6 +11,5 @@ typedef struct {
     char *buf;
 } message;
 
-message message_create(size_t size, const char *buf);
 char *sha256(message *msg);
 #endif
