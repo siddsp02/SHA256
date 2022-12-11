@@ -21,15 +21,15 @@
 #define LS1(x) (ROTR32(x, 17) ^ ROTR32(x, 19) ^ (x >> 10))
 
 #define BLOCK_COUNT(msg) (msg->size / BLOCK_SIZE)
-#define U32REVBYTES(x) (                                                        \
-    ((x >> 24) & 0x000000ff) | ((x <<  8) & 0x00ff0000) |                       \
-    ((x >>  8) & 0x0000ff00) | ((x << 24) & 0xff000000)                         \
+#define U32REVBYTES(x) (                                                       \
+    ((x >> 24) & 0x000000ff) | ((x <<  8) & 0x00ff0000) |                      \
+    ((x >>  8) & 0x0000ff00) | ((x << 24) & 0xff000000)                        \
 )
-#define U64REVBYTES(x) (                                                        \
-    ((x >> 56) & 0x00000000000000ffULL) | ((x >> 40) & 0x000000000000ff00ULL) | \
-    ((x >> 24) & 0x0000000000ff0000ULL) | ((x >>  8) & 0x00000000ff000000ULL) | \
-    ((x << 56) & 0xff00000000000000ULL) | ((x << 40) & 0x00ff000000000000ULL) | \
-    ((x << 24) & 0x0000ff0000000000ULL) | ((x <<  8) & 0x000000ff00000000ULL)   \
+#define U64REVBYTES(x) (                                                       \
+    ((x >> 56) & 0x00000000000000ffULL) | ((x >> 40) & 0x000000000000ff00ULL) |\
+    ((x >> 24) & 0x0000000000ff0000ULL) | ((x >>  8) & 0x00000000ff000000ULL) |\
+    ((x << 56) & 0xff00000000000000ULL) | ((x << 40) & 0x00ff000000000000ULL) |\
+    ((x << 24) & 0x0000ff0000000000ULL) | ((x <<  8) & 0x000000ff00000000ULL)  \
 )
 
 static const uint32_t K[] = {
@@ -50,19 +50,19 @@ static const uint32_t K[] = {
  */
 static void pad_bytes(message *msg) {
     uint64_t new_size, old_size;
+    // Calculate the size to resize the input message to
     old_size = msg->size;
-    /* Calculate the next multiple of 64 greater than the current size
-       of the block when a 1-bit is appended, and the size of the message
-       itself is added to the end as a 64-bit big-endian integer. */
     new_size = BLOCK_SIZE * -(-(old_size + 9) / BLOCK_SIZE);
     assert(new_size > old_size && new_size % 64 == 0);
+    // Reallocate and zero-initialize remaining memory.
     msg->buf = realloc(msg->buf, new_size);
-    msg->buf[old_size] = 1 << 7; // Append one-bit to message.
+    msg->buf[old_size] = 1 << 7; // Append one-bit.
     memset(msg->buf + old_size + 1, 0, new_size - old_size + 1);
     msg->size = new_size;
-    /* Get the old length of the message buffer, and append it
-       to the end of the message as a 64-bit big-endian integer.*/
+    // Append the length of the message as a 64-bit big-endian integer.
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     old_size = U64REVBYTES(old_size * 8);
+#endif
     memcpy(msg->buf + new_size - 8, &old_size, sizeof(uint64_t));
 }
 
@@ -73,8 +73,11 @@ static uint32_t *get_blocks(const char *msg) {
     uint32_t i, *w;
     w = malloc(BLOCK_SIZE * sizeof(uint32_t));
     memcpy(w, msg, 16 * sizeof(uint32_t));
+    // Reverse the bytes of each word if the byte order is little-endian.
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     for (i = 0; i < 16; ++i)
         w[i] = U32REVBYTES(w[i]);
+#endif
     for (i = 16; i < BLOCK_SIZE; ++i)
         w[i] = LS1(w[i - 2]) + w[i - 7] + LS0(w[i - 15]) + w[i - 16];
     return w;
@@ -88,6 +91,9 @@ const char *sha256(message *msg) {
     };
     pad_bytes(msg);
     n = BLOCK_COUNT(msg);
+    /* Iterate through the original message in chunks of 64 bytes,
+       and generate the block values as an array of 64 32-bit words
+       which are then used in the hashing process (SHA-rounds). */
     for (t = 0; t < n; ++t) {
         a = H[0], b = H[1], c = H[2], d = H[3];
         e = H[4], f = H[5], g = H[6], h = H[7];
@@ -112,9 +118,10 @@ const char *sha256(message *msg) {
     return ((const char *) msg->hash);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     size_t i, j, sizes[] = {3, 56, 1000000};
     message m[3];
+    // Test vectors.
     const char v0[] = {0x61, 0x62, 0x63};
     const char v1[] = {
         0x61, 0x62, 0x63, 0x64, 0x62, 0x63, 0x64, 0x65,
@@ -141,5 +148,4 @@ int main() {
         printf("\n");
         free(m[i].buf);
     }
-    return 0;
 }
