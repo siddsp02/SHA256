@@ -59,9 +59,10 @@ static void pad_bytes(message *msg) {
     msg->buf[old_size] = 1 << 7; // Append one-bit.
     memset(msg->buf + old_size + 1, 0, new_size - old_size + 1);
     msg->size = new_size;
+    old_size *= 8;
     // Append the length of the message as a 64-bit big-endian integer.
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    old_size = U64REVBYTES(old_size * 8);
+    old_size = U64REVBYTES(old_size);
 #endif
     memcpy(msg->buf + new_size - 8, &old_size, sizeof(uint64_t));
 }
