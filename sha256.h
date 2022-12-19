@@ -12,7 +12,7 @@ typedef struct {
     uint32_t hash[8];
 } message;
 
-/*
+/**
  * Returns the SHA256 hash of a message when given its contents.
  * Messages are automatically padded as part of the specification
  * of this algorithm. The hash field of the message is updated,

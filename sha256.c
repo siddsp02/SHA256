@@ -43,7 +43,7 @@ static const uint32_t K[] = {
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 };
 
-/*
+/**
  * Pads a message to a multiple of 512 bits or 64 bytes in length,
  * with a 1 bit appended as well as the size being added to the
  * end as a 64-bit big-endian integer.
@@ -67,7 +67,7 @@ static void pad_bytes(message *msg) {
     memcpy(msg->buf + new_size - 8, &old_size, sizeof(uint64_t));
 }
 
-/*
+/**
  * Gets the blocks of a message in the form of 64 32-bit words.
  */
 static uint32_t *get_blocks(const char *msg) {
@@ -117,36 +117,4 @@ const char *sha256(message *msg) {
     }
     memcpy(msg->hash, H, HASH_SIZE);
     return ((const char *) msg->hash);
-}
-
-int main(int argc, char *argv[]) {
-    size_t i, j, sizes[] = {3, 56, 1000000};
-    message m[3];
-    // Test vectors.
-    const char v0[] = {0x61, 0x62, 0x63};
-    const char v1[] = {
-        0x61, 0x62, 0x63, 0x64, 0x62, 0x63, 0x64, 0x65,
-        0x63, 0x64, 0x65, 0x66, 0x64, 0x65, 0x66, 0x67,
-        0x65, 0x66, 0x67, 0x68, 0x66, 0x67, 0x68, 0x69,
-        0x67, 0x68, 0x69, 0x6a, 0x68, 0x69, 0x6a, 0x6b,
-        0x69, 0x6a, 0x6b, 0x6c, 0x6a, 0x6b, 0x6c, 0x6d,
-        0x6b, 0x6c, 0x6d, 0x6e, 0x6c, 0x6d, 0x6e, 0x6f,
-        0x6d, 0x6e, 0x6f, 0x70, 0x6e, 0x6f, 0x70, 0x71,
-    };
-    for (i = 0; i < 3; ++i) {
-        m[i].size = sizes[i];
-        m[i].buf = malloc(sizes[i]);
-    }
-    // Initialize values.
-    memcpy(m[0].buf, v0, 3);
-    memcpy(m[1].buf, v1, 56);
-    memset(m[2].buf, 0x61, 1000000);  // One million of 0x61
-    // Print the hashes of the test vectors.
-    for (i = 0; i < 3; ++i) {
-        sha256(&m[i]);
-        for (j = 0; j < 8; ++j)
-            printf("%08x ", m[i].hash[j]);
-        printf("\n");
-        free(m[i].buf);
-    }
 }
