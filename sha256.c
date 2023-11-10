@@ -1,6 +1,6 @@
 #include "sha256.h"
 
-void pad_bytes(array(char) *msg) {
+static void pad_bytes(array(char) *msg) {
     uint64_t newsize, oldsize;
     oldsize = len(*msg);
     newsize = PADDED_LENGTH(oldsize);
@@ -16,9 +16,8 @@ void pad_bytes(array(char) *msg) {
     memcpy((*msg) + newsize - 8, &oldsize, sizeof(uint64_t));
 }
 
-uint32_t *get_blocks(char *msg) {
-    uint32_t i, *w = NULL;
-    w = malloc(BLOCK_SIZE * sizeof(uint32_t));
+static void get_blocks(uint32_t *w, char *msg) {
+    size_t i;
     memcpy(w, msg, 16 * sizeof(uint32_t));
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     for (i = 0; i < 16; ++i)
@@ -26,11 +25,10 @@ uint32_t *get_blocks(char *msg) {
 #endif
     for (i = 16; i < BLOCK_SIZE; ++i)
         w[i] = LS1(w[i - 2]) + w[i - 7] + LS0(w[i - 15]) + w[i - 16];
-    return w;
 }
 
 const char *(sha256)(array(char) *msg, uint256_t hash) {
-    uint32_t a, b, c, d, e, f, g, h, i, n, t, t1, t2, *w;
+    uint32_t a, b, c, d, e, f, g, h, i, n, t, t1, t2, w[BLOCK_SIZE];
     uint256_t H = {
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
@@ -40,7 +38,7 @@ const char *(sha256)(array(char) *msg, uint256_t hash) {
     for (t = 0; t < n; ++t) {
         a = H[0], b = H[1], c = H[2], d = H[3];
         e = H[4], f = H[5], g = H[6], h = H[7];
-        w = get_blocks((*msg) + t*BLOCK_SIZE);
+        get_blocks(w, (*msg) + t*BLOCK_SIZE);
         for (i = 0; i < BLOCK_SIZE; ++i) {
             t1 = h + BS1(e) + CH(e, f, g) + K[i] + w[i];
             t2 = BS0(a) + MAJ(a, b, c);
@@ -55,7 +53,6 @@ const char *(sha256)(array(char) *msg, uint256_t hash) {
         }
         H[0] += a, H[1] += b, H[2] += c, H[3] += d;
         H[4] += e, H[5] += f, H[6] += g, H[7] += h;
-        free(w);
     }
     memcpy(hash, H, sizeof(H));
     return (const char *) hash;
