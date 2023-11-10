@@ -1,10 +1,8 @@
 #ifndef SHA256_H
-#define SHA256_H
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <limits.h>
 #include <stdint.h>
+#include <assert.h>
+#include "array.h"
 
 #define BLOCK_SIZE 64
 #define HASH_SIZE 8 * sizeof(uint32_t)
@@ -40,17 +38,21 @@ static const uint32_t K[] = {
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 };
 
-typedef struct {
-    size_t size;
-    char *buf;
-    uint32_t hash[8];
-} message;
+typedef uint32_t uint256_t[8];
 
-/**
- * Returns the SHA256 hash of a message when given its contents.
- * Messages are automatically padded as part of the specification
- * of this algorithm. The hash field of the message is updated,
- * and a const pointer to it is returned to it for convenience.
- */
-const char *sha256(message *msg);
-#endif
+#define print_u256(val) do {        \
+    for (size_t i = 0; i < 8; ++i)  \
+        printf("%#8x ", (val)[i]);  \
+    puts("");                       \
+} while (0)
+
+#define PADDED_LENGTH(size) (BLOCK_SIZE * -(-(size + 9) / BLOCK_SIZE))
+
+#define sha256(buf) ({                  \
+    uint256_t hash;                     \
+    (uint256_t *) sha256(buf, hash);    \
+})
+
+const char *(sha256)(array(char) *msg, uint256_t hash);
+
+#endif /* SHA256_H */
