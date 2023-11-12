@@ -1,5 +1,4 @@
 CC = gcc
-# CFLAGS = -Wall -g
 
 all: sha256.o tests main
 

@@ -20,11 +20,11 @@ int main() {
         ),
         arr_fill(char, 0x61, 1000000),  // One million of 0x61.
     };
-    uint256_t *hash;
     for (size_t i = 0; i < 3; ++i) {
-        hash = sha256(&m[i]);
-        assert(memcmp(outputs[i], *hash, sizeof(uint256_t)) == 0);
-        print_u256(*hash);
+        char *hash = sha256(&m[i]);
+        assert(memcmp(outputs[i], hash, sizeof(uint256_t)) == 0);
+        print_u256(hash);
+        free(hash);
         arr_dest(m[i]);
     }
     return 0;

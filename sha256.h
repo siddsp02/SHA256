@@ -42,17 +42,15 @@ typedef uint32_t uint256_t[8];
 
 #define print_u256(val) do {        \
     for (size_t i = 0; i < 8; ++i)  \
-        printf("%#8x ", (val)[i]);  \
+        printf("%#8x ", ((uint32_t *) (val))[i]); \
     puts("");                       \
 } while (0)
 
 #define PADDED_LENGTH(size) (BLOCK_SIZE * -(-(size + 9) / BLOCK_SIZE))
 
-#define sha256(buf) ({                  \
-    uint256_t hash;                     \
-    (uint256_t *) sha256(buf, hash);    \
-})
+// Returns a heap-allocated copy of a statically-sized local array.
+#define static_copy(A) memcpy(malloc(sizeof(A)), A, sizeof(A))
 
-const char *(sha256)(array(char) *msg, uint256_t hash);
+char *(sha256)(array(char) *msg);
 
 #endif /* SHA256_H */
