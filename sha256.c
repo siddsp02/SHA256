@@ -1,4 +1,5 @@
 #include "sha256.h"
+#include <assert.h>
 
 static void pad_bytes(array(char) *msg) {
     uint64_t newsize, oldsize;
@@ -27,7 +28,7 @@ static void get_blocks(uint32_t *w, char *msg) {
         w[i] = LS1(w[i - 2]) + w[i - 7] + LS0(w[i - 15]) + w[i - 16];
 }
 
-char *(sha256)(array(char) *msg) {
+char *sha256(array(char) *msg) {
     uint32_t a, b, c, d, e, f, g, h, i, n, t, t1, t2, w[BLOCK_SIZE];
     uint256_t H = {
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,

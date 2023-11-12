@@ -1,7 +1,6 @@
 #ifndef SHA256_H
 #include <stdio.h>
 #include <stdint.h>
-#include <assert.h>
 #include "array.h"
 
 #define BLOCK_SIZE 64
@@ -15,7 +14,6 @@
 #define LS0(x) (ROTR32(x, 7) ^ ROTR32(x, 18) ^ (x >> 3))
 #define LS1(x) (ROTR32(x, 17) ^ ROTR32(x, 19) ^ (x >> 10))
 
-#define BLOCK_COUNT(msg) (msg->size / BLOCK_SIZE)
 #define U32REVBYTES(x) (                                                       \
     ((x >> 24) & 0x000000ff) | ((x <<  8) & 0x00ff0000) |                      \
     ((x >>  8) & 0x0000ff00) | ((x << 24) & 0xff000000)                        \
@@ -51,6 +49,6 @@ typedef uint32_t uint256_t[8];
 // Returns a heap-allocated copy of a statically-sized local array.
 #define static_copy(A) memcpy(malloc(sizeof(A)), A, sizeof(A))
 
-char *(sha256)(array(char) *msg);
+char *sha256(array(char) *msg);
 
 #endif /* SHA256_H */
