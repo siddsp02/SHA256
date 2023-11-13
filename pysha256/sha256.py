@@ -12,6 +12,8 @@ References:
 
 import struct
 import sys
+from itertools import batched
+from typing import Iterator
 
 K = [
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -52,7 +54,7 @@ def ls1(x: int) -> int:
     return rotr32(x, 17) ^ rotr32(x, 19) ^ (x >> 10)
 
 
-def u32_add(x: int, y: int) -> int:
+def add(x: int, y: int) -> int:
     return (x + y) % 2**32
 
 
@@ -71,6 +73,8 @@ def get_blocks(msg: bytes) -> list[int]:
         w[i] = (ls1(w[i - 2]) + w[i - 7] + ls0(w[i - 15]) + w[i - 16]) % 2**32
     return w
 
+def chunks(buf: bytearray, size: int = 64) -> Iterator[bytes]:
+    return map(bytes, batched(buf, size))
 
 def sha256(msg: bytearray) -> list[int]:
     """Returns the SHA256 hash of a message when given its contents.
@@ -83,15 +87,14 @@ def sha256(msg: bytearray) -> list[int]:
         0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19,
     ]
     pad_bytes(msg)
-    for t in range(0, len(msg), 64):
+    for w in map(get_blocks, chunks(msg, 64)):
         a, b, c, d, e, f, g, h = H
-        w = get_blocks(msg[t:t+64])
-        for i in range(64):
-            t1 = (h + bs1(e) + ch(e, f, g) + K[i] + w[i]) % 2**32
+        for kx, wx in zip(K, w):
+            t1 = (h + bs1(e) + ch(e, f, g) + kx + wx) % 2**32
             t2 = (bs0(a) + maj(a, b, c)) % 2**32
             h, g, f, e = g, f, e, (d + t1) % 2**32
             d, c, b, a = c, b, a, (t1 + t2) % 2**32
-        H[:] = map(u32_add, H, [a, b, c, d, e, f, g, h])
+        H[:] = map(add, H, [a, b, c, d, e, f, g, h])
     return H
 
 
