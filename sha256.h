@@ -12,6 +12,7 @@ typedef uint32_t uint256_t[8];
     puts("");                       \
 } while (0)
 
-char *sha256(array(char) *msg);
+char *sha256(array(char) msg);
+char *sha256_file(FILE *fp);
 
 #endif /* SHA256_H */

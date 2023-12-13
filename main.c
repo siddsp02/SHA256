@@ -6,6 +6,6 @@ int main(int argc, char *argv[]) {
         arr_push(buf, *c);
     char *hash = sha256(&buf);
     print_u256(hash);
-    arr_dest(buf);
+    arr_free(buf);
     return 0;
 }
