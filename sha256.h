@@ -6,11 +6,12 @@
 #include <assert.h>
 
 #define BLOCK_SIZE 64
+#define HASH_SIZE 32
 
 typedef struct {
     size_t size;
     char block[BLOCK_SIZE];
-    uint32_t hash[8];
+    uint32_t hash[HASH_SIZE / sizeof(uint32_t)];
 } sha256_t;
 
 
