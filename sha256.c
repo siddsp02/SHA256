@@ -63,10 +63,6 @@ static void sha256_round(uint32_t *H, const char *ptr) {
     H[4] += e, H[5] += f, H[6] += g, H[7] += h;
 }
 
-/* This function is less than ideal, because it only updates one block
-   at at time. This will later be changed/optimized so as many blocks
-   for a buffer will be processed all at once. The recursive definition
-   is also less than ideal, but works because of simplicity. */
 void sha256_update(sha256_t *obj, const char *msg, size_t size) {
     while (size != 0) {
         size_t remaining = obj->size % BLOCK_SIZE;
