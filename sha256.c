@@ -68,17 +68,17 @@ static void sha256_round(uint32_t *H, const char *ptr) {
    for a buffer will be processed all at once. The recursive definition
    is also less than ideal, but works because of simplicity. */
 void sha256_update(sha256_t *obj, const char *msg, size_t size) {
-    if (size == 0)
-        return;
-    size_t remaining, processed;
-    remaining = obj->size % BLOCK_SIZE;
-    processed = MIN(size, BLOCK_SIZE - remaining);
-    memcpy(obj->block + remaining, msg, processed);
-    obj->size += processed;
-    if ((remaining + processed) < BLOCK_SIZE)
-        return;
-    sha256_round(obj->hash, obj->block);
-    sha256_update(obj, msg + processed, size - processed);
+    while (size != 0) {
+        size_t remaining = obj->size % BLOCK_SIZE;
+        size_t processed = MIN(size, BLOCK_SIZE - remaining);
+        memcpy(obj->block + remaining, msg, processed);
+        obj->size += processed;
+        if ((remaining + processed) < BLOCK_SIZE)
+            break;
+        sha256_round(obj->hash, obj->block);
+        msg += processed;
+        size -= processed;
+    }
 }
 
 sha256_t sha256_init(const char *msg, size_t size) {
