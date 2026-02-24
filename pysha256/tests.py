@@ -1,13 +1,20 @@
 # !usr/bin/env python3
 
-from sha256 import sha256
+import ctypes
+import struct
+import sys
+from ctypes import c_char
+
+from sha256 import HASH_SIZE, sha256_digest, sha256_init
+
+BYTEORDER_FORMAT = "<" if sys.byteorder == "little" else ">"
 
 # fmt: off
 
 def main() -> None:
     vectors = [
-        bytearray([0x61, 0x62, 0x63]),
-        bytearray([
+        bytes([0x61, 0x62, 0x63]),
+        bytes([
             0x61, 0x62, 0x63, 0x64, 0x62, 0x63, 0x64, 0x65,
             0x63, 0x64, 0x65, 0x66, 0x64, 0x65, 0x66, 0x67,
             0x65, 0x66, 0x67, 0x68, 0x66, 0x67, 0x68, 0x69,
@@ -16,19 +23,21 @@ def main() -> None:
             0x6b, 0x6c, 0x6d, 0x6e, 0x6c, 0x6d, 0x6e, 0x6f,
             0x6d, 0x6e, 0x6f, 0x70, 0x6e, 0x6f, 0x70, 0x71,
         ]),
-        bytearray([0x61]) * 1000000,
+        bytes([0x61]) * 1000000,
     ]
     outputs = [
         [0xba7816bf, 0x8f01cfea, 0x414140de, 0x5dae2223, 0xb00361a3, 0x96177a9c, 0xb410ff61, 0xf20015ad],
         [0x248d6a61, 0xd20638b8, 0xe5c02693, 0x0c3e6039, 0xa33ce459, 0x64ff2167, 0xf6ecedd4, 0x19db06c1],
         [0xcdc76e5c, 0x9914fb92, 0x81a1c7e2, 0x84d73e67, 0xf1809a48, 0xa497200e, 0x046d39cc, 0xc7112cd0]
     ]
+    
+    out = (c_char * HASH_SIZE)()
     for v, output in zip(vectors, outputs):
-        hash = sha256(v)
-        for value in hash:
-            print(f"{value:08x}", end=" ")
-        assert hash == output
-        print()
+        s = sha256_init(v, len(v))
+        sha256_digest(ctypes.byref(s), out)
+        result = list(struct.unpack(f"{BYTEORDER_FORMAT}8L", out))
+        print(" ".join(f"{value:08x}" for value in result))
+        assert result == output
 
 
 if __name__ == "__main__":
