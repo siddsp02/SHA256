@@ -1,13 +1,8 @@
 # !usr/bin/env python3
 
-import ctypes
-import struct
-import sys
-from ctypes import c_char
 
-from sha256 import HASH_SIZE, sha256_digest, sha256_init
+from sha256 import sha256
 
-BYTEORDER_FORMAT = "<" if sys.byteorder == "little" else ">"
 
 # fmt: off
 
@@ -31,13 +26,11 @@ def main() -> None:
         [0xcdc76e5c, 0x9914fb92, 0x81a1c7e2, 0x84d73e67, 0xf1809a48, 0xa497200e, 0x046d39cc, 0xc7112cd0]
     ]
     
-    out = (c_char * HASH_SIZE)()
     for v, output in zip(vectors, outputs):
-        s = sha256_init(v, len(v))
-        sha256_digest(ctypes.byref(s), out)
-        result = list(struct.unpack(f"{BYTEORDER_FORMAT}8L", out))
-        print(" ".join(f"{value:08x}" for value in result))
-        assert result == output
+        s = sha256(v)
+        result = s.digest()
+        print([hex(r) for r in result])
+        assert list(result) == output
 
 
 if __name__ == "__main__":

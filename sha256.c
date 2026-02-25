@@ -77,14 +77,14 @@ void sha256_update(sha256_t *obj, const char *msg, size_t size) {
     }
 }
 
-sha256_t sha256_init(const char *msg, size_t size) {
+sha256_t *sha256_init(sha256_t *obj, const char *msg, size_t size) {
     const uint32_t H[] = {
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
     };
-    sha256_t obj = (sha256_t) { 0 };
-    memcpy(obj.hash, H, sizeof(H));
-    sha256_update(&obj, msg, size);
+    memset(obj, 0, sizeof(sha256_t));
+    memcpy(obj->hash, H, sizeof(H));
+    sha256_update(obj, msg, size);
     return obj;
 }
 

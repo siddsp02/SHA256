@@ -25,7 +25,8 @@ int main() {
     char m2[1000] = { [0 ... 999] = 0x61};
     uint32_t out[8] = { 0 };
     
-    sha256_t s = sha256_init(m1, 3);
+    sha256_t s;
+    sha256_init(&s, m1, 3);
     
     sha256_digest(&s, (char *) out);
     PRINT_OUTPUT(out);
@@ -38,7 +39,7 @@ int main() {
     PRINT_OUTPUT(out);
     assert(memcmp(out, outputs[1], 32) == 0);
 
-    s = sha256_init(m2, 1000);
+    sha256_init(&s, m2, 1000);
     for (size_t i = 0; i < 999; ++i)
         sha256_update(&s, m2, 1000);
 

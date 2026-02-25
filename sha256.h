@@ -16,7 +16,7 @@ typedef struct {
 
 
 void sha256_update(sha256_t *obj, const char *msg, size_t size);
-sha256_t sha256_init(const char *msg, size_t size);
+sha256_t *sha256_init(sha256_t *obj, const char *msg, size_t size);
 char *sha256_digest(const sha256_t *obj, char *out);
 
 #endif /* SHA256_H */
