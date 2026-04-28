@@ -19,6 +19,7 @@
     ((x << 56) & 0xff00000000000000ULL) | ((x << 40) & 0x00ff000000000000ULL) |\
     ((x << 24) & 0x0000ff0000000000ULL) | ((x <<  8) & 0x000000ff00000000ULL)  \
 )
+#define CALC_PADDING(x, size) ((size) * -(-((x) + 9) / (size)))
 
 static const uint32_t K[] = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -77,7 +78,7 @@ void sha256_update(sha256_t *obj, const char *msg, size_t size) {
     }
 }
 
-sha256_t *sha256_init(sha256_t *obj, const char *msg, size_t size) {
+sha256_t *sha256_init(sha256_t *obj, const char msg[], size_t size) {
     const uint32_t H[] = {
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
@@ -88,12 +89,12 @@ sha256_t *sha256_init(sha256_t *obj, const char *msg, size_t size) {
     return obj;
 }
 
-char *sha256_digest(const sha256_t *obj, char *out) {
+char *sha256_digest(const sha256_t *obj, char out[HASH_SIZE]) {
     size_t remaining, pad, n;
     uint32_t H[8];
-    remaining = obj->size % BLOCK_SIZE;
-    pad = BLOCK_SIZE * -(-(remaining + 9) / BLOCK_SIZE);
     char msg[BLOCK_SIZE * 2] = { 0 };
+    remaining = obj->size % BLOCK_SIZE;
+    pad = CALC_PADDING(remaining, BLOCK_SIZE);
     memcpy(msg, obj->block, remaining);
     memcpy(H, obj->hash, sizeof(H));
     msg[remaining] = 1 << 7;
